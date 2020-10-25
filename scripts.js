@@ -124,44 +124,10 @@ let quartosTriplos = document.getElementById("quartosTriplos")
 let cafe = document.getElementsByName("cafe")
 let vaga = document.getElementsByName("vaga")
 let obs = document.getElementById("obs")
+let cliente = document.getElementById("cliente")
 
 const reservas = []
-const estruturaQuartos = {
-  duplos: [{
-      num: "101",
-      reservas: []
-    },
-    {
-      num: "103",
-      reservas: []
-    },
-    {
-      num: "105",
-      reservas: []
-    },
-    {
-      num: "107",
-      reservas: []
-    }
-  ],
-  triplos: [{
-      num: "102",
-      reservas: []
-    },
-    {
-      num: "104",
-      reservas: []
-    },
-    {
-      num: "106",
-      reservas: []
-    },
-    {
-      num: "108",
-      reservas: []
-    }
-  ]
-}
+
 
 function comparaDatas(data1, data2) {
   let partes1 = data1.split("-")
@@ -171,9 +137,50 @@ function comparaDatas(data1, data2) {
   return data1 >= data2 ? true : false
 }
 
+function geraID() {
+  return '_' + Math.random().toString(36).substr(2, 9)
+}
+
 function cadastraReserva() {
-  function Reserva(id, checkin, checkout, quartosDuplos, quartosTriplos, cafe, garagem, obs) {
-    this.id = id
+  const estruturaQuartos = {
+    duplos: [{
+        num: "101",
+        reservas: []
+      },
+      {
+        num: "103",
+        reservas: []
+      },
+      {
+        num: "105",
+        reservas: []
+      },
+      {
+        num: "107",
+        reservas: []
+      }
+    ],
+    triplos: [{
+        num: "102",
+        reservas: []
+      },
+      {
+        num: "104",
+        reservas: []
+      },
+      {
+        num: "106",
+        reservas: []
+      },
+      {
+        num: "108",
+        reservas: []
+      }
+    ]
+  }
+  function Reserva(cliente, checkin, checkout, quartosDuplos, quartosTriplos, cafe, garagem, obs) {
+    this.id = geraID()
+    this.cliente = cliente
     this.checkin = checkin
     this.checkout = checkout
     this.quartosDuplos = quartosDuplos
@@ -185,10 +192,10 @@ function cadastraReserva() {
 
   let quartos = JSON.parse(localStorage.getItem('arrayQuartos')) ? JSON.parse(localStorage.getItem('arrayQuartos')) : estruturaQuartos
 
-  let id = ''
+  let cliente = ''
   JSON.parse(localStorage.getItem('arrayCadastros')).forEach(element => {
     if (element.status) {
-      id = element.login
+      cliente = element.login
     }
   })
 
@@ -209,56 +216,83 @@ function cadastraReserva() {
   let duplos = Number(quartosDuplos.value)
   let triplos = Number(quartosTriplos.value)
 
-
-  if (dataCheckOut.value > dataCheckIn.value && duplos > 0 || triplos > 0) {
-    let reserva = new Reserva(id, dataCheckIn.value, dataCheckOut.value, duplos, triplos, opcaoCafe, opcaoVaga, obs.value)
-    console.log(reserva)
-
-    loop1:
-      for (let h = 0; h < reserva.quartosDuplos; h++) {
-        loop2: for (let i = 0; i < quartos.duplos.length; i++) {
-          if (quartos.duplos[i].reservas.length > 0) {
-            if (!quartos.duplos[i].reservas.some(element => element.checkin === reserva.checkin) && !quartos.duplos[i].reservas.some(element => element.checkout === reserva.checkout)) {
-              for (let j = 0; j < quartos.duplos[i].reservas.length; j++) {
-                if (comparaDatas(reserva.checkin, quartos.duplos[i].reservas[j].checkout) || comparaDatas(quartos.duplos[i].reservas[j].checkin, reserva.checkout)) {
-                  quartos.duplos[i].reservas.push(reserva)
-                  console.log(quartos.duplos[i].reservas)
-                  break loop2;
-                } else if (i === quartos.duplos.length - 1) {
-                  alert("Não há quartos duplos disponíveis nesta data.")
-                  break loop1;
-                }
-              }
-            }
-          } else {
-            quartos.duplos[i].reservas.push(reserva)
-            break;
-          }
-        }
-      }
-
-    loop3:
-      for (let h = 0; h < reserva.quartosTriplos; h++) {
-        loop4: for (let i = 0; i < quartos.triplos.length; i++) {
-          if (quartos.triplos[i].reservas.length > 0) {
-            if (!quartos.triplos[i].reservas.some(element => element.checkin === reserva.checkin) && !quartos.triplos[i].reservas.some(element => element.checkout === reserva.checkout)) {
-              for (let j = 0; j < quartos.triplos[i].reservas.length; j++) {
-                if (comparaDatas(reserva.checkin, quartos.triplos[i].reservas[j].checkout) || comparaDatas(quartos.triplos[i].reservas[j].checkin, reserva.checkout)) {
-                  quartos.triplos[i].reservas.push(reserva)
-                  console.log(quartos.triplos[i].reservas)
-                  break loop4;
-                } else if (i === quartos.triplos.length - 1) {
-                  alert("Não há quartos triplos disponíveis nesta data.")
-                  break loop3;
-                }
-              }
-            }
-          } else {
-            quartos.triplos[i].reservas.push(reserva)
-            break;
-          }
-        }
-      }
+  if (dataCheckOut.value > dataCheckIn.value && (duplos > 0 || triplos > 0)) {
+    let reserva = new Reserva(cliente, dataCheckIn.value, dataCheckOut.value, duplos, triplos, opcaoCafe, opcaoVaga, obs.value)
+    // console.log(reserva)
+    alocaQuartos(quartos.duplos, 'quartosDuplos', reserva)
+    alocaQuartos(quartos.triplos, 'quartosTriplos', reserva)
     localStorage.setItem('arrayQuartos', JSON.stringify(quartos))
   }
+
+  function alocaQuartos(arrayQuartos, numQuartos, reserva) {
+    if (reserva[numQuartos] <= arrayQuartos.map(element => element.reservas).filter(element => {
+        if (!element[0] || comparaDatas(reserva.checkin, element[0].checkout) || comparaDatas(element[0].checkin, reserva.checkout)) {
+          return true
+        }
+      }).length) {
+      let count = 0
+      for (let i = 0; i < reserva[numQuartos]; i++) {
+        for (let j = 0; j < arrayQuartos.length; j++) {
+          if (arrayQuartos[j].reservas.length > 0 && count < reserva[numQuartos]) {
+            if (!arrayQuartos[j].reservas.some(element => element.id === reserva.id)) {
+              for (let k = 0; k < arrayQuartos[j].reservas.length; k++) {
+                if (comparaDatas(reserva.checkin, arrayQuartos[j].reservas[k].checkout) || comparaDatas(arrayQuartos[j].reservas[k].checkin, reserva.checkout)) {
+                  arrayQuartos[j].reservas.push(reserva)
+                  count++
+                }
+              }
+            }
+          } else if (count < reserva[numQuartos]) {
+            arrayQuartos[j].reservas.push(reserva)
+            count++
+          }
+        }
+        if (count == 0) {
+          alert(`nao tem quarto`)
+          break
+        }
+      }
+    } else {
+      if (numQuartos === 'quartosDuplos') {
+        alert(`Não possuímos ${reserva[numQuartos]} quartos duplos para esta data`)
+      } else {
+        alert(`Não possuímos ${reserva[numQuartos]} quartos triplos para esta data`)
+      }
+    }
+  }
+
+}
+
+let dataInicial = document.getElementById('dataInicial')
+let dataFinal = document.getElementById('dataFinal')
+let tipoQuarto = document.getElementById('tipoQuarto')
+
+
+function buscaReserva(){
+  let arrayQuartos = JSON.parse(localStorage.getItem('arrayQuartos'))
+  let reservas = []
+  if(tipoQuarto.value === 'duplo'){
+    percorreQuartos(arrayQuartos.duplos)
+  }
+  else if(tipoQuarto.value === 'triplo'){
+    percorreQuartos(arrayQuartos.triplos)
+  }else{
+    percorreQuartos(arrayQuartos.duplos)
+    percorreQuartos(arrayQuartos.triplos)
+  }
+  function percorreQuartos(arrayQuartos){
+    for (let i = 0; i <arrayQuartos.length ; i++){
+      if(arrayQuartos[i].reservas.length > 0){
+        for (let j = 0; j < arrayQuartos[i].reservas.length; j++){
+          if (arrayQuartos[i].reservas[j].cliente === cliente.value && comparaDatas(arrayQuartos[i].reservas[j].checkin, dataInicial.value) && comparaDatas(dataFinal.value, arrayQuartos[i].reservas[j].checkin)){
+            arrayQuartos[i].reservas[j].num = arrayQuartos[i].num
+            reservas.push(arrayQuartos[i].reservas[j])  
+          }
+        }
+      }
+    }
+  }
+  
+  console.log(reservas)
+  return reservas
 }
